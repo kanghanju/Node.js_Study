@@ -7,6 +7,8 @@ const session = require("express-session");
 const dotenv = require("dotenv");
 
 dotenv.config();
+const indexRouter = require("./routes");
+const userRouter = require("./routes/user");
 
 //express로부터 app을 가져온다
 const app = express();
@@ -45,56 +47,13 @@ app.use(
   })
 );
 
-const multer = require("multer");
-const fs = require("fs");
+//app.js가 길어지는 것을 막는다. userRouter의 get은 /user와 /가 합쳐져서 GET/user/가 된다
+app.use("/", indexRouter);
+app.use("/user", userRouter);
 
-//multer 설정
-try {
-  //서버 시작전에 만드는거라서 Sync메서드를 썼다
-  fs.readdirSync("uploads");
-} catch (error) {
-  console.error("uploads 폴더가 없어 uploads 폴더를 생성합니다.");
-  fs.mkdirSync("uploads");
-}
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination(req, file, done) {
-      done(null, "uploads/");
-    },
-    filename(req, file, done) {
-      //확장자 추출
-      const ext = path.extname(file.originalname);
-      //이름이 같은 파일을 올리면 덮어씌워지기 때문에(hanju.png를 내가 올리고 A가 똑같은 이름으로 올리면 덮어씌워진다) 파일이름에 Date.now()를 쓰는것이다
-      done(null, path.basename(file.originalname, ext) + Date.now() + ext);
-    },
-  }),
-  //파일 사이즈, 파일 갯수 제한(5Mb파일로 제한)
-  limits: { fileSize: 5 * 1024 * 1024 },
+app.use((req, res, next) => {
+  res.status(404).send("Not Found");
 });
-
-//라우터
-app.get("/upload", (req, res) => {
-  res.sendFile(path.join(__dirname, "multipart.html"));
-});
-
-//하나의 파일만 업로드할 때 single('html type=file name이랑 똑같아야한다')
-app.post("/upload", upload.single("image"), (req, res) => {
-  //업로드한 정보 req.file
-  console.log(req.file);
-  res.send("ok");
-});
-
-app.get(
-  "/",
-  (req, res, next) => {
-    console.log("GET / 요청에서만 실행됩니다");
-    next();
-  },
-  (req, res) => {
-    throw new Error("에러는 에러 처리 미들웨어로 갑니다");
-  }
-);
 
 //에러처리 미들웨어
 app.use((err, req, res, next) => {
