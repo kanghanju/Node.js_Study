@@ -4,6 +4,9 @@ const path = require("path");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const dotenv = require("dotenv");
+
+dotenv.config();
 
 //express로부터 app을 가져온다
 const app = express();
@@ -25,12 +28,16 @@ app.use("/", (req, res, next) => {
   else next();
 });
 
-app.use(cookieParser("secretcode"));
+//데이터 파싱
+app.use(express.json()); //클라이언트에서 json데이터를 보냈을 때  json데이터 파싱
+app.use(express.urlencoded({ extended: true })); //클라이언트에서 form data보낼때 form 파싱하며 이미지,url은 처리 못한다
+
+app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(
   session({
     resave: false,
     saveUninitialized: false,
-    secret: "secretcode",
+    secret: process.env.COOKIE_SECRET,
     cookie: {
       httpOnly: true,
     },
@@ -38,45 +45,61 @@ app.use(
   })
 );
 
-//데이터 파싱
-app.use(express.json()); //클라이언트에서 json데이터를 보냈을 때  json데이터 파싱
-app.use(express.urlencoded({ extended: true })); //클라이언트에서 form data보낼때 form 파싱하며 이미지,url은 처리 못한다
+const multer = require("multer");
+const fs = require("fs");
+
+//multer 설정
+try {
+  //서버 시작전에 만드는거라서 Sync메서드를 썼다
+  fs.readdirSync("uploads");
+} catch (error) {
+  console.error("uploads 폴더가 없어 uploads 폴더를 생성합니다.");
+  fs.mkdirSync("uploads");
+}
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination(req, file, done) {
+      done(null, "uploads/");
+    },
+    filename(req, file, done) {
+      //확장자 추출
+      const ext = path.extname(file.originalname);
+      //이름이 같은 파일을 올리면 덮어씌워지기 때문에(hanju.png를 내가 올리고 A가 똑같은 이름으로 올리면 덮어씌워진다) 파일이름에 Date.now()를 쓰는것이다
+      done(null, path.basename(file.originalname, ext) + Date.now() + ext);
+    },
+  }),
+  //파일 사이즈, 파일 갯수 제한(5Mb파일로 제한)
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 //라우터
-//if문 안써도 분기처리가 잘 되어있다
-app.get("/", (req, res) => {
-  /* req.cookies; //{mycookie:'test'}
-  //"Set-Cookie": `name=${encodeURIComponent(name)}; Expires=${expires.toGMTString()}; HttpOnly; Path=/`
-  res.cookie("name", encodeURIComponent(name), {
-    expires: new Date(),
-    httpOnly: true,
-    path: "/",
-  });*/
-
-  //방금 요청을 보낸 사람의 id만 hello가 된다, 요청을 자꾸 보내도 나임을 기억했으면 좋겠다 = req.session(유지되고 싶은 데이터)
-  req.session.id = "hello";
-
-  //join은 상대경로로 처리, __dirname: 현재 디렉토리 경로
-  res.sendFile(path.join(__dirname, "./index.html"));
-  //!!!!!!한 라우터에 send는 1번만 하라!!!!!!!(Error:Cannnot set headers after they are sent to the client)
-  //res.send("안녕하세요");
-  //res.json({hello:'hanju'});  응답을 보낼뿐이지 함수 자체를 종료하는 것은 아니다(return없음), res.end(JSON.stringify({hello:'hanju'}));
-  //res.render();
-  //res.writeHead(200,{'Content-Type...}),res.end() => express가 편하게 두개를 합쳐 res.send()로 만든거다!
+app.get("/upload", (req, res) => {
+  res.sendFile(path.join(__dirname, "multipart.html"));
 });
 
-app.get("/about", (req, res) => {
-  res.status(200).send("hello express");
+//하나의 파일만 업로드할 때 single('html type=file name이랑 똑같아야한다')
+app.post("/upload", upload.single("image"), (req, res) => {
+  //업로드한 정보 req.file
+  console.log(req.file);
+  res.send("ok");
 });
 
-app.post("/", (req, res) => {
-  res.send("hello express");
-});
+app.get(
+  "/",
+  (req, res, next) => {
+    console.log("GET / 요청에서만 실행됩니다");
+    next();
+  },
+  (req, res) => {
+    throw new Error("에러는 에러 처리 미들웨어로 갑니다");
+  }
+);
 
 //에러처리 미들웨어
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(200).send("에러났지롱");
+  res.status(500).send("에러났지롱");
 });
 
 //위에서 사용하는 get과 아래서 사용하는 get은 다른 메서드다
