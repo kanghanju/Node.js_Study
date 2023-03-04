@@ -8,11 +8,13 @@ const nunjucks = require("nunjucks");
 //.env 파일에서 process.env객체로 환경 변수를 로드한 다음 애플리케이션 전체에서 액세스 할 수 있다
 //API키,데이터베이스 자격 증명 또는 기타 구성 설정과 같은 민감한 데이터를 안전한 방식으로 저장한다
 const dotenv = require("dotenv");
+const passport = require("passport");
 
 //dotenv.config() 함수는 .env 파일에서 process.env 객체로 환경 변수를 로드합니다. 이 함수는 환경 변수를 사용하는 다른 코드보다 먼저 Node.js 애플리케이션의 시작 부분에서 호출해야 합니다.
 //dotenv.config()를 호출하면 패키지가 .env 파일을 읽고 내용을 구문 분석하여 process.env 객체의 해당 키에 값을 할당합니다
 dotenv.config();
 const pageRouter = require("./routes/page");
+const authRouter = requier("./routes/auth");
 const { sequelize } = require("./models");
 
 const app = express();
@@ -54,9 +56,12 @@ app.use(
     },
   })
 );
+app.use(passport.initialize());
+//로그인 후에 그 다음 요청부터 passport.session()실행, index.js의 deserializeUser
+app.use(passport.session());
 
-//pageRouter연결
 app.use("/", pageRouter);
+app.use("/auth", authRouter);
 
 //404처리 미들웨어
 app.use((req, res, next) => {
