@@ -13,6 +13,7 @@ const dotenv = require("dotenv");
 //dotenv.config()를 호출하면 패키지가 .env 파일을 읽고 내용을 구문 분석하여 process.env 객체의 해당 키에 값을 할당합니다
 dotenv.config();
 const pageRouter = require("./routes/page");
+const { sequelize } = require("./models");
 
 const app = express();
 //개발할때와 배포할때의 port를 다르게 설정하기위해 ||사용
@@ -24,6 +25,16 @@ nunjucks.configure("views", {
   express: app, //Express애플리케이션의 인스턴스
   watch: true, //템플릿 파일의 변경 사항을 감시하고 변경 시 자동으로 다시 로드해준다:true
 });
+
+//서버 실행되면서 sequelize연결이 된다
+sequelize
+  .sync({ force: false }) //데이터는 그대로 두고 column을 변경하고 싶을때: alter:true
+  .then(() => {
+    console.log("데이터 베이스 연결 성공");
+  })
+  .catch((err) => {
+    console.error(err);
+  });
 
 //각 요청에 대한 정보를 dev 형식을 사용해 콘솔에 기록한다. dev형식: HTTP메서드,URL,응답 상태,응답 시간 등과 같은 세부정보
 app.use(morgan("dev"));
