@@ -15,6 +15,7 @@ router.get("/", (req, res, next) => {
   res.render("main", {
     title: "NodeBird",
     twits,
+    user: req.user, //유저가 있으면 메인페이지를 보여준다
   });
 });
 

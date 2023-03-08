@@ -14,8 +14,9 @@ const passport = require("passport");
 //dotenv.config()를 호출하면 패키지가 .env 파일을 읽고 내용을 구문 분석하여 process.env 객체의 해당 키에 값을 할당합니다
 dotenv.config();
 const pageRouter = require("./routes/page");
-const authRouter = requier("./routes/auth");
+const authRouter = require("./routes/auth");
 const { sequelize } = require("./models");
+const passportConfig = require("./passport");
 
 const app = express();
 //개발할때와 배포할때의 port를 다르게 설정하기위해 ||사용
@@ -37,6 +38,7 @@ sequelize
   .catch((err) => {
     console.error(err);
   });
+passportConfig();
 
 //각 요청에 대한 정보를 dev 형식을 사용해 콘솔에 기록한다. dev형식: HTTP메서드,URL,응답 상태,응답 시간 등과 같은 세부정보
 app.use(morgan("dev"));

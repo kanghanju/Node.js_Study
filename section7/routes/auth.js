@@ -66,4 +66,19 @@ router.get("/logout", isLoggedIn, (req, res) => {
   res.redirect("/");
 });
 
+//카카오톡 로그인, kakaoStrategy로 가기 전에 카카오홈페이지로 가서 카카오 로그인을 한다
+router.get("/kakao", passport.authenticate("kakao")); //kakaoStrategy로 이동
+
+//로그인 성공시, 카카오가 /kakao/callback으로 요청을 한다
+router.get(
+  "/kakao/callback",
+  passport.authenticate("kakao", {
+    failureRedirect: "/",
+  }),
+  (req, res) => {
+    //카카오 로그인 성공하면 여기로 온다
+    res.redirect("/");
+  }
+);
+
 module.exports = router;
